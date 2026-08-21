@@ -1,0 +1,30 @@
+{
+  "name": "ai-interview-preparation-system",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w @ai-interview/api\" \"npm run dev -w @ai-interview/web\"",
+    "dev:api": "npm run dev -w @ai-interview/api",
+    "dev:web": "npm run dev -w @ai-interview/web",
+    "build": "npm run build -w @ai-interview/web",
+    "lint": "eslint .",
+    "test": "npm run test --workspaces --if-present",
+    "check": "npm run lint && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.5",
+    "eslint": "^10.0.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.4",
+    "globals": "^17.11.0"
+  }
+}

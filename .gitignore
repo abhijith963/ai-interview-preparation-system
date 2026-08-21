@@ -1,0 +1,50 @@
+node_modules/
+dist/
+coverage/
+.vite/
+.cache/
+.nyc_output/
+
+# Browser and QA output
+playwright-report/
+test-results/
+blob-report/
+qa-artifacts/
+artifacts/
+*.lcov
+
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.local
+*.local.*
+.npmrc
+!.npmrc.example
+
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.pid
+*.pid.lock
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+uploads/
+tmp/
+.tmp/
+.mongodb/
+
+# Local credentials and certificates
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Original stakeholder source documents are retained locally, not needed at runtime
+/AI Interview Preperation System Report.pdf
+/AI POWERED INTERVIEW PREPERATION SYSTEM 1.pptx
