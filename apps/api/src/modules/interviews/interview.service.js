@@ -1,4 +1,9 @@
-import { ADAPTIVE_CONFIG, SCORING_CONFIG } from '@ai-interview/shared';
+import {
+  ADAPTIVE_CONFIG,
+  DEFAULT_INTERVIEW_MODE,
+  SCORING_CONFIG,
+  computeVoiceMetrics,
+} from '@ai-interview/shared';
 import mongoose from 'mongoose';
 
 import { AppError } from '../../lib/app-error.js';
@@ -230,7 +235,7 @@ export const createInterviewService = ({ aiGateway }) => {
   };
 
   return Object.freeze({
-    async createInterview({ roleId, useResume, user }) {
+    async createInterview({ mediaConsent, mode = DEFAULT_INTERVIEW_MODE, roleId, useResume, user }) {
       if (!user.selectedRoleId) {
         throw new AppError(
           422,
@@ -269,6 +274,14 @@ export const createInterviewService = ({ aiGateway }) => {
         );
       }
 
+      if (mode === 'VOICE' && !mediaConsent?.microphone) {
+        throw new AppError(
+          422,
+          'MICROPHONE_CONSENT_REQUIRED',
+          'Voice interviews need microphone consent. You can still start a text interview.',
+        );
+      }
+
       const interview = await InterviewSession.create({
         configVersions: {
           adaptive: ADAPTIVE_CONFIG.version,
@@ -277,6 +290,11 @@ export const createInterviewService = ({ aiGateway }) => {
           scoring: SCORING_CONFIG.version,
         },
         currentDifficulty: ADAPTIVE_CONFIG.initialDifficulty,
+        mediaConsent: {
+          camera: Boolean(mediaConsent?.camera),
+          microphone: Boolean(mediaConsent?.microphone),
+        },
+        mode,
         resumeClaims,
         resumeId: resume?._id ?? null,
         roleDomain: role.domain,
@@ -404,7 +422,15 @@ export const createInterviewService = ({ aiGateway }) => {
       return toAnswerResult(interview, item);
     },
 
-    async submitAnswer({ answerText, idempotencyKey, interviewId, questionId, userId }) {
+    async submitAnswer({
+      answerText,
+      durationMs,
+      idempotencyKey,
+      interviewId,
+      questionId,
+      source = 'TYPED',
+      userId,
+    }) {
       const existing = await getOwnedInterview(interviewId, userId);
       const duplicate = findDuplicateSubmission(existing, { idempotencyKey, questionId });
       if (duplicate?.evaluation) return toAnswerResult(existing, duplicate);
@@ -446,9 +472,15 @@ export const createInterviewService = ({ aiGateway }) => {
         {
           $set: {
             [`items.${itemIndex}.answer`]: {
+              durationMs: durationMs ?? null,
               idempotencyKey,
+              source,
               submittedAt: new Date(),
               text: answerText,
+              voiceMetrics:
+                source === 'VOICE_TRANSCRIPT'
+                  ? computeVoiceMetrics({ durationMs: durationMs ?? 0, transcript: answerText })
+                  : null,
             },
             status: 'EVALUATING_ANSWER',
           },

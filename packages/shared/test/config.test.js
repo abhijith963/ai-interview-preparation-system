@@ -3,13 +3,18 @@ import test from 'node:test';
 
 import {
   ADAPTIVE_CONFIG,
+  AVAILABLE_INTERVIEW_MODES,
   COMPETENCY_CONFIG,
+  DEFAULT_INTERVIEW_MODE,
   DIFFICULTY_LEVELS,
+  INTERVIEW_MODES,
   INTERVIEW_SESSION_STATES,
   INTERVIEW_STATE_TRANSITIONS,
   READINESS_CONFIG,
   ROLE_PROFILES,
+  SCORE_FAMILIES,
   SCORING_CONFIG,
+  computeVoiceMetrics,
 } from '../src/index.js';
 
 const sum = (values) => values.reduce((total, value) => total + value, 0);
@@ -58,4 +63,24 @@ test('every declared interview transition points to a declared state', () => {
       assert.ok(INTERVIEW_SESSION_STATES.includes(target));
     }
   }
+});
+
+test('interview modes reserve later media and live paths without changing the text default', () => {
+  assert.deepEqual(INTERVIEW_MODES, ['TEXT', 'VOICE', 'VIDEO', 'LIVE']);
+  assert.deepEqual(AVAILABLE_INTERVIEW_MODES, ['TEXT', 'VOICE']);
+  assert.equal(DEFAULT_INTERVIEW_MODE, 'TEXT');
+  assert.equal(SCORE_FAMILIES.technical.feedsReadiness, true);
+  assert.equal(SCORE_FAMILIES.communication.feedsReadiness, false);
+  assert.equal(SCORE_FAMILIES.behaviour.feedsReadiness, false);
+});
+
+test('voice metrics count pace and fillers without becoming a technical score', () => {
+  const metrics = computeVoiceMetrics({
+    durationMs: 60_000,
+    transcript: 'Um I would like, you know, validate the request then return an error.',
+  });
+  assert.equal(metrics.wordCount, 13);
+  assert.equal(metrics.speakingPaceWpm, 13);
+  assert.equal(metrics.fillerCount, 3);
+  assert.equal(metrics.fillerRatePerMinute, 3);
 });

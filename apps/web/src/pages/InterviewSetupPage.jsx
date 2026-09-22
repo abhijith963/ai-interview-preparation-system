@@ -12,6 +12,8 @@ export function InterviewSetupPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [microphoneConsent, setMicrophoneConsent] = useState(false);
+  const [mode, setMode] = useState('TEXT');
   const [resume, setResume] = useState(null);
   const [roles, setRoles] = useState([]);
   const [selectedRoleId, setSelectedRoleId] = useState(user.selectedRoleId ?? '');
@@ -66,7 +68,12 @@ export function InterviewSetupPage() {
     try {
       await saveSelectedRole();
       const data = await apiRequest('/interviews', {
-        body: { roleId: selectedRoleId, useResume },
+        body: {
+          mediaConsent: { microphone: mode === 'VOICE' && microphoneConsent },
+          mode,
+          roleId: selectedRoleId,
+          useResume,
+        },
         method: 'POST',
       });
       navigate(`/interviews/${data.session.id}`);
@@ -92,7 +99,8 @@ export function InterviewSetupPage() {
         </h1>
         <p className="mt-3 max-w-3xl text-slate-600">
           Your selection sets the skill categories used by the 10-question adaptive interview.
-          You can change it before starting a new session.
+          Text interviews are the verified core. Voice interviews add microphone recording,
+          transcription, and spoken questions without changing the technical score.
         </p>
       </section>
 
@@ -157,6 +165,54 @@ export function InterviewSetupPage() {
           Start at Medium difficulty, answer one question at a time, and receive structured
           feedback as difficulty adjusts from your last two valid performance signals.
         </p>
+        <fieldset className="mt-5">
+          <legend className="text-sm font-semibold text-slate-950">Interview mode</legend>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {[
+              ['TEXT', 'Text interview', 'Type answers. This is the completed, verified path.'],
+              ['VOICE', 'Voice interview', 'Record answers, edit the transcript, and hear the question.'],
+            ].map(([value, label, description]) => (
+              <label
+                className={`cursor-pointer rounded-xl border bg-white p-4 ${
+                  mode === value ? 'border-indigo-500 ring-2 ring-indigo-100' : 'border-slate-200'
+                }`}
+                key={value}
+              >
+                <span className="flex items-start gap-3">
+                  <input
+                    checked={mode === value}
+                    className="mt-1 size-4 accent-indigo-600"
+                    name="interview-mode"
+                    onChange={() => setMode(value)}
+                    type="radio"
+                    value={value}
+                  />
+                  <span>
+                    <span className="block font-semibold text-slate-950">{label}</span>
+                    <span className="mt-1 block text-sm leading-6 text-slate-600">{description}</span>
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        {mode === 'VOICE' ? (
+          <label className="mt-4 flex items-start gap-3 rounded-xl border border-indigo-200 bg-white p-4 text-sm text-slate-700">
+            <input
+              checked={microphoneConsent}
+              className="mt-0.5 size-4 accent-indigo-600"
+              onChange={(event) => setMicrophoneConsent(event.target.checked)}
+              type="checkbox"
+            />
+            <span>
+              <span className="block font-semibold text-slate-950">Allow microphone for this session</span>
+              <span className="mt-1 block leading-6">
+                Required for voice mode. The interviewer uses the transcript for technical scoring.
+                Pace and filler-word counts are stored as separate communication metrics.
+              </span>
+            </span>
+          </label>
+        ) : null}
         <label className="mt-5 flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
           <input
             checked={useResume}
@@ -176,7 +232,7 @@ export function InterviewSetupPage() {
         </label>
         <button
           className="button-primary mt-5"
-          disabled={isStarting || !selectedRoleId}
+          disabled={isStarting || !selectedRoleId || (mode === 'VOICE' && !microphoneConsent)}
           onClick={handleStart}
           type="button"
         >

@@ -28,6 +28,7 @@ export const toPublicEvaluation = (item) => {
   );
   return {
     answerScore: evaluation.answerScore,
+    answerSource: item.answer?.source ?? 'TYPED',
     difficultyTransition: item.difficultyTransition,
     dimensionEvidence,
     dimensionScores,
@@ -48,6 +49,7 @@ export const toPublicEvaluation = (item) => {
       status: evaluation.resumeConsistency.status,
     },
     strengths: evaluation.strengths,
+    voiceMetrics: item.answer?.voiceMetrics ?? null,
   };
 };
 
@@ -55,6 +57,7 @@ export const toSessionSummary = (interview) => ({
   answeredCount: interview.items.filter(({ evaluation }) => evaluation).length,
   currentDifficulty: interview.currentDifficulty,
   id: toId(interview._id),
+  mode: interview.mode ?? 'TEXT',
   questionCount: interview.questionCount,
   role: {
     domain: interview.roleDomain,
@@ -102,10 +105,13 @@ export const toInterviewReport = (interview) => ({
   endedEarlyAt: interview.endedEarlyAt,
   id: toId(interview._id),
   items: interview.items.map((item) => ({
+    answerSource: item.answer?.source ?? null,
     answerText: item.answer?.text ?? null,
     evaluation: toPublicEvaluation(item),
     question: toPublicQuestion(item),
+    voiceMetrics: item.answer?.voiceMetrics ?? null,
   })),
+  mode: interview.mode ?? 'TEXT',
   result: interview.result,
   role: {
     domain: interview.roleDomain,

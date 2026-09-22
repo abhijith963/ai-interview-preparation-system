@@ -1,16 +1,31 @@
-import { INTERVIEW_SESSION_STATES, ROLE_PROFILES } from '@ai-interview/shared';
+import {
+  ANSWER_SOURCES,
+  AVAILABLE_INTERVIEW_MODES,
+  DEFAULT_INTERVIEW_MODE,
+  INTERVIEW_SESSION_STATES,
+  ROLE_PROFILES,
+} from '@ai-interview/shared';
 import { z } from 'zod';
 
 const roleIds = ROLE_PROFILES.map(({ id }) => id);
 
 export const createInterviewSchema = z.object({
+  mediaConsent: z
+    .object({
+      camera: z.boolean().optional(),
+      microphone: z.boolean().optional(),
+    })
+    .optional(),
+  mode: z.enum(AVAILABLE_INTERVIEW_MODES).default(DEFAULT_INTERVIEW_MODE),
   roleId: z.enum(roleIds),
   useResume: z.boolean(),
 });
 
 export const submitAnswerSchema = z.object({
   answerText: z.string().trim().min(1).max(10_000),
+  durationMs: z.number().int().min(0).max(600_000).optional(),
   questionId: z.string().trim().min(1).max(80),
+  source: z.enum(ANSWER_SOURCES).default('TYPED'),
 });
 
 export const idempotencyKeySchema = z.string().trim().min(8).max(120);

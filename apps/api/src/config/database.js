@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 export const connectDatabase = async (mongodbUri) => {
   mongoose.set('strictQuery', true);
-  await mongoose.connect(mongodbUri, { serverSelectionTimeoutMS: 5_000 });
+  await mongoose.connect(mongodbUri, { serverSelectionTimeoutMS: 30_000 });
   return mongoose.connection;
 };
 

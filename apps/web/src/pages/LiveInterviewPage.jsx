@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { VoiceAnswerPanel } from '../features/interview-media/VoiceAnswerPanel.jsx';
+import {
+  speakInterviewQuestion,
+  stopInterviewSpeech,
+} from '../features/interview-media/speech.js';
 import { LoadingPanel } from '../components/LoadingPanel.jsx';
 import { StatusMessage } from '../components/StatusMessage.jsx';
 import { apiRequest } from '../lib/api.js';
@@ -24,6 +29,8 @@ export function LiveInterviewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [view, setView] = useState(null);
+  const durationMs = useRef(0);
+  const spokenQuestionId = useRef(null);
   const submission = useRef({ key: null, questionId: null });
   const { interviewId } = useParams();
   const navigate = useNavigate();
@@ -94,7 +101,12 @@ export function LiveInterviewPage() {
     setIsProcessing(true);
     try {
       const data = await apiRequest(`/interviews/${interviewId}/answers`, {
-        body: { answerText: trimmedAnswer, questionId: question.id },
+        body: {
+          answerText: trimmedAnswer,
+          durationMs: view.session.mode === 'VOICE' ? durationMs.current : undefined,
+          questionId: question.id,
+          source: view.session.mode === 'VOICE' ? 'VOICE_TRANSCRIPT' : 'TYPED',
+        },
         headers: { 'Idempotency-Key': submission.current.key },
         method: 'POST',
       });
@@ -136,6 +148,7 @@ export function LiveInterviewPage() {
     }
     setAnswerText('');
     setFeedback(null);
+    durationMs.current = 0;
     submission.current = { key: null, questionId: null };
   };
 
@@ -156,18 +169,30 @@ export function LiveInterviewPage() {
     }
   };
 
+  const { currentQuestion, session } = view ?? {};
+  const isVoice = session?.mode === 'VOICE';
+
+  useEffect(() => {
+    if (!isVoice || !currentQuestion || feedback || view?.error) return;
+    if (spokenQuestionId.current === currentQuestion.id) return;
+    spokenQuestionId.current = currentQuestion.id;
+    speakInterviewQuestion(currentQuestion.questionText);
+    return () => stopInterviewSpeech();
+  }, [currentQuestion, feedback, isVoice, view?.error]);
+
   if (isLoading) return <LoadingPanel label="Restoring your interview…" />;
   if (!view) {
     return <StatusMessage tone="error">{error || 'The interview could not be loaded.'}</StatusMessage>;
   }
 
-  const { currentQuestion, session } = view;
-
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">Live interview · {session.role.label}</p>
+          <p className="eyebrow">
+            Live interview · {session.role.label}
+            {isVoice ? ' · Voice' : ' · Text'}
+          </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
             Question {currentQuestion?.position ?? session.answeredCount} of {session.questionCount}
           </h1>
@@ -256,6 +281,38 @@ export function LiveInterviewPage() {
             </div>
           </div>
 
+          {feedback.voiceMetrics ? (
+            <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <h3 className="font-semibold text-slate-950">Communication (voice)</h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Separate from the technical score. These are practice signals from the transcript
+                and recording length, not personality or confidence.
+              </p>
+              <dl className="mt-3 grid gap-3 sm:grid-cols-4">
+                <div>
+                  <dt className="text-xs text-slate-500">Pace</dt>
+                  <dd className="font-semibold text-slate-950">
+                    {feedback.voiceMetrics.speakingPaceWpm ?? '—'} wpm
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-slate-500">Words</dt>
+                  <dd className="font-semibold text-slate-950">{feedback.voiceMetrics.wordCount}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-slate-500">Fillers</dt>
+                  <dd className="font-semibold text-slate-950">{feedback.voiceMetrics.fillerCount}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-slate-500">Filler rate</dt>
+                  <dd className="font-semibold text-slate-950">
+                    {feedback.voiceMetrics.fillerRatePerMinute ?? '—'} / min
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          ) : null}
+
           {feedback.resumeConsistency.status !== 'NOT_APPLICABLE' ? (
             <StatusMessage>
               <strong>Resume consistency — {feedback.resumeConsistency.status.replaceAll('_', ' ')}:</strong>{' '}
@@ -279,21 +336,47 @@ export function LiveInterviewPage() {
           <h2 className="mt-4 text-xl font-semibold leading-8 text-slate-950">
             {currentQuestion.questionText}
           </h2>
+          {isVoice ? (
+            <button
+              className="button-secondary mt-4"
+              onClick={() => speakInterviewQuestion(currentQuestion.questionText)}
+              type="button"
+            >
+              Play question
+            </button>
+          ) : null}
           <form className="mt-7" onSubmit={handleSubmit}>
-            <label className="field-label" htmlFor="interview-answer">
-              Your written answer
-            </label>
-            <textarea
-              className="field-input min-h-56 resize-y"
-              disabled={isProcessing}
-              id="interview-answer"
-              maxLength={10_000}
-              onChange={(event) => setAnswerText(event.target.value)}
-              placeholder="Explain your reasoning, relevant concepts, and trade-offs…"
-              value={answerText}
-            />
+            {isVoice ? (
+              <VoiceAnswerPanel
+                disabled={isProcessing}
+                onTranscriptChange={(text, elapsed) => {
+                  setAnswerText(text);
+                  durationMs.current = elapsed;
+                }}
+                transcript={answerText}
+              />
+            ) : (
+              <>
+                <label className="field-label" htmlFor="interview-answer">
+                  Your written answer
+                </label>
+                <textarea
+                  className="field-input min-h-56 resize-y"
+                  disabled={isProcessing}
+                  id="interview-answer"
+                  maxLength={10_000}
+                  onChange={(event) => setAnswerText(event.target.value)}
+                  placeholder="Explain your reasoning, relevant concepts, and trade-offs…"
+                  value={answerText}
+                />
+              </>
+            )}
             <div className="mt-2 flex justify-between gap-4 text-xs text-slate-500">
-              <span>Evaluation considers only this written response.</span>
+              <span>
+                {isVoice
+                  ? 'Technical scoring uses the transcript. Voice metrics stay separate.'
+                  : 'Evaluation considers only this written response.'}
+              </span>
               <span>{answerText.length}/10,000</span>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">

@@ -1,5 +1,8 @@
 import {
+  ANSWER_SOURCES,
+  DEFAULT_INTERVIEW_MODE,
   DIFFICULTY_LEVELS,
+  INTERVIEW_MODES,
   INTERVIEW_SESSION_STATES,
 } from '@ai-interview/shared';
 import mongoose from 'mongoose';
@@ -92,6 +95,25 @@ const interviewItemSchema = new mongoose.Schema({
         text: { type: String, required: true, maxlength: 10_000 },
         idempotencyKey: { type: String, required: true, maxlength: 120 },
         submittedAt: { type: Date, required: true },
+        source: {
+          type: String,
+          enum: ANSWER_SOURCES,
+          default: 'TYPED',
+        },
+        durationMs: { type: Number, min: 0, max: 600_000, default: null },
+        voiceMetrics: {
+          type: new mongoose.Schema(
+            {
+              durationMs: { type: Number, required: true },
+              fillerCount: { type: Number, required: true },
+              fillerRatePerMinute: { type: Number, default: null },
+              speakingPaceWpm: { type: Number, default: null },
+              wordCount: { type: Number, required: true },
+            },
+            { _id: false },
+          ),
+          default: null,
+        },
       },
       { _id: false },
     ),
@@ -138,6 +160,15 @@ const interviewSessionSchema = new mongoose.Schema(
     roleDomain: { type: String, required: true },
     roleProfileVersion: { type: String, required: true },
     status: { type: String, enum: INTERVIEW_SESSION_STATES, default: 'CREATED' },
+    mode: {
+      type: String,
+      enum: INTERVIEW_MODES,
+      default: DEFAULT_INTERVIEW_MODE,
+    },
+    mediaConsent: {
+      microphone: { type: Boolean, default: false },
+      camera: { type: Boolean, default: false },
+    },
     questionCount: { type: Number, default: 10, immutable: true },
     currentQuestionIndex: { type: Number, default: -1, min: -1, max: 9 },
     currentDifficulty: { type: String, enum: DIFFICULTY_LEVELS, required: true },

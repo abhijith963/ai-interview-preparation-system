@@ -119,6 +119,8 @@ describe('Phase 3 interview pages', () => {
       if (request.path === '/resume') return response({ resume: null });
       if (request.path === '/interviews' && request.method === 'POST') {
         expect(JSON.parse(options.body)).toEqual({
+          mode: 'TEXT',
+          mediaConsent: { microphone: false },
           roleId: 'backend-developer',
           useResume: false,
         });

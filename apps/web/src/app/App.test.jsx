@@ -243,7 +243,7 @@ describe('Phase 2 application flows', () => {
     expect(
       await screen.findByRole('heading', { name: 'Choose your target software role.' }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole('radio')).toHaveLength(4);
+    expect(screen.getAllByRole('radio')).toHaveLength(6);
     await browser.click(screen.getByRole('radio', { name: /Backend Developer/ }));
     await browser.click(screen.getByRole('button', { name: 'Save target role' }));
 
