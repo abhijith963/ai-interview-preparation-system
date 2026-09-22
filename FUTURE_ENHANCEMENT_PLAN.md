@@ -33,6 +33,7 @@ The repository is an npm-workspaces modular monolith:
 4. Readiness is a **preparation indicator**, never a hiring prediction.
 5. Media (audio/video) is optional, user-consented, deletable, and never required to complete a text interview.
 6. Each new modality is a module that can fail independently without breaking text interviews.
+7. Voice metrics are practice signals from the recording and transcript, not personality or confidence.
 
 ---
 
@@ -358,14 +359,21 @@ apps/web/src/features/
 
 ## Definition of “fully featured” for this project
 
-The application is fully featured when a candidate can:
+The project is **fully featured** when:
 
-1. Complete a stable text interview with resume-aware questions, scores, history, and readiness
-2. Optionally complete voice and video practice with permissions and deletion
-3. See separate communication and camera-visibility feedback
-4. Hold a live follow-up conversation with a chosen interviewer round/personality
-5. Practise in more than one language with the same evaluation model
-6. Review all of that on one analytics dashboard
-7. Trust that media is consented, stored with rules, and removable, on a deployable system
+1. All 10 phases are complete and verified
+2. The system runs in production with media, concurrent users, and real accounts
+3. All scoring families are properly separated and labelled
+4. The module map is followed and maintained
+5. The scoring families are never collapsed into one hidden number
+6. The system is documented and tested for production
 
-Work proceeds phase by phase in this file’s order. Phase 1 is the current execution focus.
+The project is **not fully featured** if:
+
+- Any phase is incomplete or unverified
+- The system cannot run in production with media and real accounts
+- Scoring families are collapsed into one hidden number
+- The module map is not followed or maintained
+- The system is not documented and tested for production
+
+The project is **fully featured** when it meets all of the above criteria.

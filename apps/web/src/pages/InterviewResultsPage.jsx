@@ -40,6 +40,33 @@ export function InterviewResultsPage() {
     .map(({ evaluation }) => evaluation?.resumeConsistency)
     .filter((observation) => observation && observation.status !== 'NOT_APPLICABLE');
 
+  const voiceMetrics = report.items
+    .map(({ evaluation }) => evaluation?.voiceMetrics)
+    .filter(Boolean);
+
+  const averageVoiceMetrics = voiceMetrics.length
+    ? (() => {
+        const paces = voiceMetrics
+          .map((metric) => metric.speakingPaceWpm)
+          .filter((value) => Number.isFinite(value));
+        return {
+          speakingPaceWpm: paces.length
+            ? Math.round(paces.reduce((total, value) => total + value, 0) / paces.length)
+            : null,
+          wordCount: Math.round(
+            voiceMetrics.reduce((total, metric) => total + metric.wordCount, 0) / voiceMetrics.length,
+          ),
+          fillerCount: voiceMetrics.reduce((total, metric) => total + metric.fillerCount, 0),
+          fillerRatePerMinute: Number(
+            (
+              voiceMetrics.reduce((total, metric) => total + (metric.fillerRatePerMinute ?? 0), 0) /
+              voiceMetrics.length
+            ).toFixed(2),
+          ),
+        };
+      })()
+    : null;
+
   return (
     <div className="space-y-8">
       <section className="rounded-3xl bg-gradient-to-br from-indigo-700 to-violet-700 p-8 text-white sm:p-10">
@@ -84,6 +111,46 @@ export function InterviewResultsPage() {
         </p>
       </section>
 
+      {averageVoiceMetrics ? (
+        <section aria-labelledby="voice-title">
+          <p className="eyebrow">Communication (voice)</p>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-950" id="voice-title">
+            Voice practice signals
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Averages across {voiceMetrics.length} recorded answer{voiceMetrics.length === 1 ? '' : 's'}.
+            These are practice signals from the recordings and transcripts, not personality,
+            confidence, or honesty. They never change the technical score above.
+          </p>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <article className="card">
+              <p className="text-sm font-medium leading-5 text-slate-600">Speaking pace</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-950">
+                {averageVoiceMetrics.speakingPaceWpm ?? '—'}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">words per minute</p>
+            </article>
+            <article className="card">
+              <p className="text-sm font-medium leading-5 text-slate-600">Words spoken</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-950">{averageVoiceMetrics.wordCount}</p>
+              <p className="mt-1 text-xs text-slate-500">average per answer</p>
+            </article>
+            <article className="card">
+              <p className="text-sm font-medium leading-5 text-slate-600">Filler words</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-950">{averageVoiceMetrics.fillerCount}</p>
+              <p className="mt-1 text-xs text-slate-500">total across answers</p>
+            </article>
+            <article className="card">
+              <p className="text-sm font-medium leading-5 text-slate-600">Filler rate</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-950">
+                {averageVoiceMetrics.fillerRatePerMinute ?? '—'}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">per minute</p>
+            </article>
+          </div>
+        </section>
+      ) : null}
+
       <section className="grid gap-5 md:grid-cols-2">
         <article className="card">
           <h2 className="text-xl font-semibold text-slate-950">Strengths observed</h2>
@@ -127,7 +194,7 @@ export function InterviewResultsPage() {
           Per-question results
         </h2>
         <div className="mt-5 space-y-4">
-          {report.items.map(({ answerText, evaluation, question }) => (
+          {report.items.map(({ answerText, evaluation, question, voiceMetrics: itemVoiceMetrics }) => (
             <details className="card group" key={question.id}>
               <summary className="cursor-pointer list-none font-semibold text-slate-950">
                 <span className="flex flex-wrap items-center justify-between gap-3">
@@ -139,6 +206,11 @@ export function InterviewResultsPage() {
               </summary>
               <div className="mt-5 border-t border-slate-200 pt-5 text-sm leading-6 text-slate-600">
                 <p><strong className="text-slate-950">Difficulty:</strong> {question.difficulty}</p>
+                {itemVoiceMetrics ? (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Voice: {itemVoiceMetrics.speakingPaceWpm ?? '—'} wpm · {itemVoiceMetrics.wordCount} words · {itemVoiceMetrics.fillerCount} fillers
+                  </p>
+                ) : null}
                 <p className="mt-3 whitespace-pre-line"><strong className="text-slate-950">Your answer:</strong> {answerText ?? 'Not answered.'}</p>
                 {evaluation ? (
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
