@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { VideoAnswerPanel } from '../features/interview-media/VideoAnswerPanel.jsx';
 import { VoiceAnswerPanel } from '../features/interview-media/VoiceAnswerPanel.jsx';
 import {
   speakInterviewQuestion,
@@ -171,14 +172,15 @@ export function LiveInterviewPage() {
 
   const { currentQuestion, session } = view ?? {};
   const isVoice = session?.mode === 'VOICE';
+  const isVideo = session?.mode === 'VIDEO';
 
   useEffect(() => {
-    if (!isVoice || !currentQuestion || feedback || view?.error) return;
+    if ((!isVoice && !isVideo) || !currentQuestion || feedback || view?.error) return;
     if (spokenQuestionId.current === currentQuestion.id) return;
     spokenQuestionId.current = currentQuestion.id;
     speakInterviewQuestion(currentQuestion.questionText);
     return () => stopInterviewSpeech();
-  }, [currentQuestion, feedback, isVoice, view?.error]);
+  }, [currentQuestion, feedback, isVoice, isVideo, view?.error]);
 
   if (isLoading) return <LoadingPanel label="Restoring your interview…" />;
   if (!view) {
@@ -191,7 +193,7 @@ export function LiveInterviewPage() {
         <div>
           <p className="eyebrow">
             Live interview · {session.role.label}
-            {isVoice ? ' · Voice' : ' · Text'}
+            {isVoice ? ' · Voice' : isVideo ? ' · Video' : ' · Text'}
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
             Question {currentQuestion?.position ?? session.answeredCount} of {session.questionCount}
@@ -336,7 +338,7 @@ export function LiveInterviewPage() {
           <h2 className="mt-4 text-xl font-semibold leading-8 text-slate-950">
             {currentQuestion.questionText}
           </h2>
-          {isVoice ? (
+          {isVoice || isVideo ? (
             <button
               className="button-secondary mt-4"
               onClick={() => speakInterviewQuestion(currentQuestion.questionText)}
@@ -346,7 +348,16 @@ export function LiveInterviewPage() {
             </button>
           ) : null}
           <form className="mt-7" onSubmit={handleSubmit}>
-            {isVoice ? (
+            {isVideo ? (
+              <VideoAnswerPanel
+                disabled={isProcessing}
+                onTranscriptChange={(text, elapsed) => {
+                  setAnswerText(text);
+                  durationMs.current = elapsed;
+                }}
+                transcript={answerText}
+              />
+            ) : isVoice ? (
               <VoiceAnswerPanel
                 disabled={isProcessing}
                 onTranscriptChange={(text, elapsed) => {

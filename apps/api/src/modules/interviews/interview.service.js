@@ -282,6 +282,14 @@ export const createInterviewService = ({ aiGateway }) => {
         );
       }
 
+      if (mode === 'VIDEO' && (!mediaConsent?.camera || !mediaConsent?.microphone)) {
+        throw new AppError(
+          422,
+          'CAMERA_AND_MICROPHONE_CONSENT_REQUIRED',
+          'Video interviews need camera and microphone consent. You can still start a text or voice interview.',
+        );
+      }
+
       const interview = await InterviewSession.create({
         configVersions: {
           adaptive: ADAPTIVE_CONFIG.version,

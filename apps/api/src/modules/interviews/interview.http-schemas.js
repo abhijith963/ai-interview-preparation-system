@@ -21,6 +21,18 @@ export const createInterviewSchema = z.object({
   useResume: z.boolean(),
 });
 
+export const createVideoInterviewSchema = z.object({
+  mediaConsent: z
+    .object({
+      camera: z.boolean().optional(),
+      microphone: z.boolean().optional(),
+    })
+    .optional(),
+  mode: z.literal('VIDEO'),
+  roleId: z.enum(roleIds),
+  useResume: z.boolean(),
+});
+
 export const submitAnswerSchema = z.object({
   answerText: z.string().trim().min(1).max(10_000),
   durationMs: z.number().int().min(0).max(600_000).optional(),

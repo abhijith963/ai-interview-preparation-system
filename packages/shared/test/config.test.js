@@ -67,7 +67,7 @@ test('every declared interview transition points to a declared state', () => {
 
 test('interview modes reserve later media and live paths without changing the text default', () => {
   assert.deepEqual(INTERVIEW_MODES, ['TEXT', 'VOICE', 'VIDEO', 'LIVE']);
-  assert.deepEqual(AVAILABLE_INTERVIEW_MODES, ['TEXT', 'VOICE']);
+  assert.deepEqual(AVAILABLE_INTERVIEW_MODES, ['TEXT', 'VOICE', 'VIDEO']);
   assert.equal(DEFAULT_INTERVIEW_MODE, 'TEXT');
   assert.equal(SCORE_FAMILIES.technical.feedsReadiness, true);
   assert.equal(SCORE_FAMILIES.communication.feedsReadiness, false);

@@ -12,6 +12,7 @@ export function InterviewSetupPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [cameraConsent, setCameraConsent] = useState(false);
   const [microphoneConsent, setMicrophoneConsent] = useState(false);
   const [mode, setMode] = useState('TEXT');
   const [resume, setResume] = useState(null);
@@ -69,7 +70,10 @@ export function InterviewSetupPage() {
       await saveSelectedRole();
       const data = await apiRequest('/interviews', {
         body: {
-          mediaConsent: { microphone: mode === 'VOICE' && microphoneConsent },
+          mediaConsent: {
+            camera: mode === 'VIDEO' && cameraConsent,
+            microphone: (mode === 'VOICE' || mode === 'VIDEO') && microphoneConsent,
+          },
           mode,
           roleId: selectedRoleId,
           useResume,
@@ -212,6 +216,38 @@ export function InterviewSetupPage() {
               </span>
             </span>
           </label>
+        ) : mode === 'VIDEO' ? (
+          <div className="mt-4 space-y-3">
+            <label className="flex items-start gap-3 rounded-xl border border-indigo-200 bg-white p-4 text-sm text-slate-700">
+              <input
+                checked={microphoneConsent}
+                className="mt-0.5 size-4 accent-indigo-600"
+                onChange={(event) => setMicrophoneConsent(event.target.checked)}
+                type="checkbox"
+              />
+              <span>
+                <span className="block font-semibold text-slate-950">Allow microphone for this session</span>
+                <span className="mt-1 block leading-6">
+                  Required for video mode. The interviewer uses the transcript for technical scoring.
+                  Pace and filler-word counts are stored as separate communication metrics.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-3 rounded-xl border border-indigo-200 bg-white p-4 text-sm text-slate-700">
+              <input
+                checked={cameraConsent}
+                className="mt-0.5 size-4 accent-indigo-600"
+                onChange={(event) => setCameraConsent(event.target.checked)}
+                type="checkbox"
+              />
+              <span>
+                <span className="block font-semibold text-slate-950">Allow camera for this session</span>
+                <span className="mt-1 block leading-6">
+                  Required for video mode. The camera preview will appear during the interview.
+                </span>
+              </span>
+            </label>
+          </div>
         ) : null}
         <label className="mt-5 flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
           <input
@@ -232,7 +268,12 @@ export function InterviewSetupPage() {
         </label>
         <button
           className="button-primary mt-5"
-          disabled={isStarting || !selectedRoleId || (mode === 'VOICE' && !microphoneConsent)}
+          disabled={
+            isStarting ||
+            !selectedRoleId ||
+            (mode === 'VOICE' && !microphoneConsent) ||
+            (mode === 'VIDEO' && (!cameraConsent || !microphoneConsent))
+          }
           onClick={handleStart}
           type="button"
         >

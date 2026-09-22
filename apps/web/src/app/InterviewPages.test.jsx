@@ -120,7 +120,35 @@ describe('Phase 3 interview pages', () => {
       if (request.path === '/interviews' && request.method === 'POST') {
         expect(JSON.parse(options.body)).toEqual({
           mode: 'TEXT',
-          mediaConsent: { microphone: false },
+          mediaConsent: { camera: false, microphone: false },
+          roleId: 'backend-developer',
+          useResume: false,
+        });
+        return response({
+          currentQuestion: firstQuestion,
+          error: null,
+          lastEvaluation: null,
+          session: session(),
+        }, 201);
+      }
+      if (request.path === '/interviews' && request.method === 'POST') {
+        expect(JSON.parse(options.body)).toEqual({
+          mode: 'VOICE',
+          mediaConsent: { microphone: true },
+          roleId: 'backend-developer',
+          useResume: false,
+        });
+        return response({
+          currentQuestion: firstQuestion,
+          error: null,
+          lastEvaluation: null,
+          session: session(),
+        }, 201);
+      }
+      if (request.path === '/interviews' && request.method === 'POST') {
+        expect(JSON.parse(options.body)).toEqual({
+          mode: 'VIDEO',
+          mediaConsent: { camera: true, microphone: true },
           roleId: 'backend-developer',
           useResume: false,
         });

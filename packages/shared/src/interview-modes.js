@@ -1,6 +1,6 @@
 export const INTERVIEW_MODES = Object.freeze(['TEXT', 'VOICE', 'VIDEO', 'LIVE']);
 
-export const AVAILABLE_INTERVIEW_MODES = Object.freeze(['TEXT', 'VOICE']);
+export const AVAILABLE_INTERVIEW_MODES = Object.freeze(['TEXT', 'VOICE', 'VIDEO']);
 
 export const DEFAULT_INTERVIEW_MODE = 'TEXT';
 
