@@ -2,7 +2,7 @@
 
 ## Purpose and problem
 
-Students and entry-level job seekers often prepare with static question banks and receive little evidence-based feedback. This system provides a repeatable text interview, adapts its difficulty, grounds selected questions in a confirmed resume, and turns completed answers into explainable preparation evidence.
+Students and entry-level job seekers often prepare with static question banks and receive little evidence-based feedback. This system provides repeatable text, voice, and video interviews, adapts their difficulty, grounds selected questions in a confirmed resume, and turns completed answers into explainable preparation evidence.
 
 The product supports practice. It does not make hiring decisions, infer personality or emotion, or estimate the probability of employment.
 
@@ -22,20 +22,20 @@ React + Tailwind + Recharts
 Node.js + Express modular monolith
   | auth/resume/interview/analytics services
   | deterministic scoring and calculations
-  | server-only OpenAI adapter
+  | server-only Groq adapter
   v
 MongoDB + GridFS
 ```
 
-The browser never receives the OpenAI key, prompts, hidden question rubrics, or password hashes. The API enforces authentication and ownership. MongoDB stores application records, server sessions, and GridFS resume binaries. Shared role and algorithm configuration lives in `packages/shared` so the API and UI use the same approved labels without duplicating calculation authority.
+The browser never receives the Groq key, prompts, hidden question rubrics, or password hashes. The API enforces authentication and ownership. MongoDB stores application records, server sessions, and GridFS resume binaries. Shared role and algorithm configuration lives in `packages/shared` so the API and UI use the same approved labels without duplicating calculation authority.
 
 ## Complete user flow
 
 1. The user registers, accepts basic processing consent, or signs in.
 2. The user may upload a PDF/DOCX resume up to 5 MB. The server validates and extracts text; the user reviews and confirms the resulting sections. A user can instead continue without a resume.
 3. The user selects one of four roles on interview setup. This also becomes the saved target role.
-4. The API creates a 10-question session at Medium and asks OpenAI for a structured first question.
-5. The user answers one question at a time. The API validates the answer, asks OpenAI for structured dimension evidence, calculates the weighted score itself, persists the result, adapts difficulty, and generates the next question.
+4. The API creates a 10-question session at Medium and asks Groq for a structured first question.
+5. The user answers one question at a time. The API validates the answer, asks Groq for structured dimension evidence, calculates the weighted score itself, persists the result, adapts difficulty, and generates the next question.
 6. Refreshing restores the last committed session state. An idempotency key makes an answer retry return the already accepted evaluation instead of creating another one.
 7. After question 10, the API persists the final report and recomputes role-specific analytics from all remaining completed evidence.
 8. Results show the session score, dimension breakdown, per-question evidence/feedback, strengths, improvements, and applicable resume observations.
@@ -44,9 +44,9 @@ The browser never receives the OpenAI key, prompts, hidden question rubrics, or 
 
 ## AI interview workflow
 
-Only the backend calls the OpenAI Responses API. The configured model receives the role profile, current difficulty, prior question summaries, selected skill, and a confirmed resume claim only when needed. Resume text and answers are delimited and treated as untrusted data rather than instructions. Question and evaluation responses must satisfy application Zod schemas.
+Only the backend calls the Groq API. The configured model receives the role profile, current difficulty, prior question summaries, selected skill, and a confirmed resume claim only when needed. Resume text and answers are delimited and treated as untrusted data rather than instructions. Question and evaluation responses must satisfy application Zod schemas.
 
-The gateway sends `store: false`, applies a per-request timeout, disables SDK retries, and permits only the configured bounded application retry. A malformed or failed response does not fabricate a question/evaluation or update a score. Hidden reference points are persisted on the server and omitted from live browser payloads.
+The gateway applies a per-request timeout, disables SDK retries, and permits only the configured bounded application retry. A malformed or failed response does not fabricate a question/evaluation or update a score. Hidden reference points are persisted on the server and omitted from live browser payloads.
 
 Questions are checked for role/category IDs, requested difficulty, grounding, prohibited content, and similarity to previous questions. Evaluations return five 0–5 dimension scores plus evidence, strengths, missing concepts, improvement advice, demonstrated skills, and an optional resume-consistency observation. The server—not the model—owns all totals and transitions.
 

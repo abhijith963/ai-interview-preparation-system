@@ -1,17 +1,16 @@
-# OpenAI Structured-Output Contracts
+# Groq Structured-Output Contracts
 
-These are implemented internal backend contracts, not public HTTP endpoints. Phase 3 uses the OpenAI Responses API `responses.parse` flow with Zod-backed structured outputs. User content is delimited as untrusted data, and responses are used only after server and policy validation. See the official [OpenAI Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs).
+These are implemented internal backend contracts, not public HTTP endpoints. The application uses Groq chat completions with Zod-derived strict JSON schema output. User content is delimited as untrusted data, and responses are used only after server and policy validation. See the official [Groq Structured Outputs guide](https://console.groq.com/docs/structured-outputs).
 
 ## Shared request rules
 
-- Use the model configured by `OPENAI_MODEL`.
-- Set `store: false`.
+- Use the model configured by `GROQ_MODEL`.
 - Use a versioned operation-specific instruction and strict structured output.
 - Send only the minimum role, rubric, confirmed resume, and answer context required.
 - Do not send passwords, authentication data, contact details, unrelated personal data, or other users' records.
 - A provider response never authorizes data access, state transitions, numeric totals, or configuration changes.
 
-The gateway uses `store: false`; provider-side abuse-monitoring retention remains subject to the OpenAI account's data controls as described in the official [OpenAI data-controls documentation](https://developers.openai.com/api/docs/guides/your-data#default-usage-policies-by-endpoint).
+Provider-side data handling remains subject to the Groq account's configured controls and policies.
 
 ## Question generation input
 

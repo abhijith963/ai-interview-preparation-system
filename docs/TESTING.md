@@ -9,7 +9,7 @@ npm run check
 npm audit
 ```
 
-`npm run check` executes ESLint, backend Node/Supertest tests, frontend Vitest/Testing Library tests, shared algorithm/configuration tests, and the Vite production build. Automated interview tests inject a deterministic fake OpenAI gateway and do not consume API credits. MongoDB integration tests use isolated test databases.
+`npm run check` executes ESLint, backend Node/Supertest tests, frontend Vitest/Testing Library tests, shared algorithm/configuration tests, and the Vite production build. Automated interview tests inject a deterministic fake AI gateway and do not consume API credits. MongoDB integration tests use isolated test databases.
 
 Focused commands:
 
@@ -25,7 +25,7 @@ Coverage includes authentication and ownership; PDF/DOCX validation/extraction/r
 
 ## Optional real-provider browser smoke test
 
-`scripts/final-qa-smoke.mjs` drives the actual browser UI against a running API, MongoDB, and OpenAI. It is deliberately outside `npm test` because it consumes API credits and requires local services. It creates timestamped users, two 10-question interviews (resume-grounded and role-only), scoped test files, and screenshots. Use only a disposable database.
+`scripts/final-qa-smoke.mjs` drives the actual browser UI against a running API, MongoDB, and Groq. It is deliberately outside `npm test` because it consumes API credits and requires local services. It creates timestamped users, two 10-question interviews (resume-grounded and role-only), scoped test files, and screenshots. Use only a disposable database.
 
 Example preparation:
 

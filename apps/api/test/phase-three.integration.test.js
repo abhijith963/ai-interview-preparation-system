@@ -73,6 +73,119 @@ test('interview creation generates a role-aware Medium first question without le
   assert.equal(refreshed.body.data.currentQuestion.id, response.body.data.currentQuestion.id);
 });
 
+test('voice and video interview creation requires the matching media consent', async () => {
+  const agent = request.agent(createTestApp(createFakeAiGateway()));
+  await registerAndSelectRole(agent, 'media-consent@example.com');
+
+  const voiceFailure = await createInterview(agent, { mode: 'VOICE' }).expect(422);
+  assert.equal(voiceFailure.body.error.code, 'MICROPHONE_CONSENT_REQUIRED');
+
+  const videoFailure = await createInterview(agent, {
+    mediaConsent: { microphone: true },
+    mode: 'VIDEO',
+  }).expect(422);
+  assert.equal(
+    videoFailure.body.error.code,
+    'CAMERA_AND_MICROPHONE_CONSENT_REQUIRED',
+  );
+
+  const voice = await createInterview(agent, {
+    mediaConsent: { camera: false, microphone: true },
+    mode: 'VOICE',
+  }).expect(201);
+  assert.equal(voice.body.data.session.mode, 'VOICE');
+
+  const video = await createInterview(agent, {
+    mediaConsent: { camera: true, microphone: true },
+    mode: 'VIDEO',
+  }).expect(201);
+  assert.equal(video.body.data.session.mode, 'VIDEO');
+});
+
+test('voice and video audio is transcribed and VIDEO answers retain recorded duration and communication metrics', async () => {
+  const aiGateway = createFakeAiGateway({
+    transcriptionFactory: () =>
+      'Use validation middleware and return one consistent safe error envelope.',
+  });
+  const agent = request.agent(createTestApp(aiGateway));
+  await registerAndSelectRole(agent, 'recorded-answers@example.com');
+
+  for (const mode of ['VOICE', 'VIDEO']) {
+    const created = await createInterview(agent, {
+      mediaConsent: {
+        camera: mode === 'VIDEO',
+        microphone: true,
+      },
+      mode,
+    }).expect(201);
+    const { currentQuestion, session } = created.body.data;
+
+    const transcription = await agent
+      .post(`/api/v1/interviews/${session.id}/transcriptions`)
+      .attach('audio', Buffer.from('test webm audio'), {
+        contentType: 'audio/webm',
+        filename: 'answer.webm',
+      })
+      .expect(200);
+    assert.equal(
+      transcription.body.data.transcript,
+      'Use validation middleware and return one consistent safe error envelope.',
+    );
+
+    const answer = await agent
+      .post(`/api/v1/interviews/${session.id}/answers`)
+      .set('Idempotency-Key', `${mode.toLowerCase()}-recorded-answer`)
+      .send({
+        answerText: transcription.body.data.transcript,
+        durationMs: 4_000,
+        questionId: currentQuestion.id,
+        source: 'VOICE_TRANSCRIPT',
+      })
+      .expect(200);
+    assert.equal(answer.body.data.evaluation.answerSource, 'VOICE_TRANSCRIPT');
+    assert.equal(answer.body.data.evaluation.voiceMetrics.durationMs, 4_000);
+    assert.equal(answer.body.data.evaluation.voiceMetrics.wordCount, 10);
+
+    const stored = await InterviewSession.findById(session.id);
+    assert.equal(stored.items[0].answer.source, 'VOICE_TRANSCRIPT');
+    assert.equal(stored.items[0].answer.durationMs, 4_000);
+    assert.ok(stored.items[0].answer.voiceMetrics);
+  }
+
+  assert.equal(aiGateway.transcriptionCalls.length, 2);
+  assert.equal(aiGateway.transcriptionCalls[0].mimeType, 'audio/webm');
+});
+
+test('transcription rejects text sessions, missing audio, and unsupported formats', async () => {
+  const agent = request.agent(createTestApp(createFakeAiGateway()));
+  await registerAndSelectRole(agent, 'transcription-validation@example.com');
+  const created = await createInterview(agent).expect(201);
+  const interviewId = created.body.data.session.id;
+
+  const missing = await agent
+    .post(`/api/v1/interviews/${interviewId}/transcriptions`)
+    .expect(422);
+  assert.equal(missing.body.error.code, 'AUDIO_REQUIRED');
+
+  const unsupported = await agent
+    .post(`/api/v1/interviews/${interviewId}/transcriptions`)
+    .attach('audio', Buffer.from('not audio'), {
+      contentType: 'text/plain',
+      filename: 'answer.txt',
+    })
+    .expect(415);
+  assert.equal(unsupported.body.error.code, 'AUDIO_TYPE_UNSUPPORTED');
+
+  const unavailable = await agent
+    .post(`/api/v1/interviews/${interviewId}/transcriptions`)
+    .attach('audio', Buffer.from('test webm audio'), {
+      contentType: 'audio/webm',
+      filename: 'answer.webm',
+    })
+    .expect(409);
+  assert.equal(unavailable.body.error.code, 'TRANSCRIPTION_NOT_AVAILABLE');
+});
+
 test('resume-based question generation uses only a snapshotted confirmed claim', async () => {
   const aiGateway = createFakeAiGateway();
   const agent = request.agent(createTestApp(aiGateway));

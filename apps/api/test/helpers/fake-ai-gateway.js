@@ -52,9 +52,11 @@ const defaultEvaluation = (context) => ({
 export const createFakeAiGateway = ({
   evaluationFactory = defaultEvaluation,
   questionFactory = defaultQuestion,
+  transcriptionFactory = () => 'A transcribed technical answer.',
 } = {}) => {
   const evaluationCalls = [];
   const questionCalls = [];
+  const transcriptionCalls = [];
   return {
     evaluationCalls,
     model: 'fake-interview-model',
@@ -63,6 +65,7 @@ export const createFakeAiGateway = ({
       question: 'fake-question-v1',
     },
     questionCalls,
+    transcriptionCalls,
     async evaluateAnswer(context) {
       evaluationCalls.push(context);
       return evaluationFactory(context, evaluationCalls.length);
@@ -70,6 +73,10 @@ export const createFakeAiGateway = ({
     async generateQuestion(context) {
       questionCalls.push(context);
       return questionFactory(context, questionCalls.length);
+    },
+    async transcribeAudio(input) {
+      transcriptionCalls.push(input);
+      return transcriptionFactory(input, transcriptionCalls.length);
     },
   };
 };

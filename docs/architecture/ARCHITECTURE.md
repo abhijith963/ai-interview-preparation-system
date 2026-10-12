@@ -12,7 +12,7 @@ Browser
   -> middleware (session, validation, ownership)
   -> feature service/domain logic
   -> Mongoose / MongoDB and GridFS
-  -> OpenAI adapter (question/evaluation operations only)
+  -> Groq adapter (question/evaluation/transcription operations)
 ```
 
 ## Frontend
@@ -36,12 +36,12 @@ Browser
 - Repositories/models own persistence details.
 - Shared approved configuration is imported from `@ai-interview/shared`.
 - The backend is the sole authority for scoring, adaptation, competency, readiness, ownership, and deletion.
-- A single server-only OpenAI gateway uses the Responses API with Zod-backed structured outputs. It is dependency-injected so prompts/models and deterministic test fakes do not change controllers or domain calculations.
-- OpenAI calls use `store: false`, a configured SDK timeout, disabled SDK auto-retries, and one application-level bounded retry for malformed or transient responses.
+- A single server-only Groq gateway uses chat completions with Zod-derived strict structured outputs and Whisper transcription. It is dependency-injected so prompts/models and deterministic test fakes do not change controllers or domain calculations.
+- Groq calls use a configured SDK timeout, disabled SDK auto-retries, and one application-level bounded retry for malformed or transient responses.
 - Interview state, ownership, idempotency, weighted scores, difficulty transitions, and final session aggregation remain deterministic backend responsibilities.
 - Phase 4 analytics are deterministic and role-separated. Completion and completed-session deletion rebuild materialized competency/readiness records from stored completed evidence.
 
-The OpenAI direction follows the official [Responses API reference](https://developers.openai.com/api/reference/typescript/resources/beta/subresources/responses/methods/create) and a configurable model that supports structured outputs. The initial example model is documented in [Environment](../setup/ENVIRONMENT.md).
+The Groq integration follows its official [structured-output documentation](https://console.groq.com/docs/structured-outputs) and uses a configurable model that supports strict JSON schema output. The initial example model is documented in [Environment](../setup/ENVIRONMENT.md).
 
 ## Request and error rules
 
@@ -56,5 +56,5 @@ The OpenAI direction follows the official [Responses API reference](https://deve
 ## Deliberately absent
 
 - Microservices, message brokers, Kubernetes, event sourcing, and separate analytics databases.
-- Client-side OpenAI calls.
+- Client-side AI-provider calls.
 - Production-scale queues, tracing, provider failover, and extensive audit infrastructure.

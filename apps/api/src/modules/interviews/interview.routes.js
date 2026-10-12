@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 
 import { AppError } from '../../lib/app-error.js';
 import { requireAuth } from '../../middleware/require-auth.js';
@@ -10,6 +11,7 @@ import {
   interviewHistoryQuerySchema,
   submitAnswerSchema,
 } from './interview.http-schemas.js';
+import { validateInterviewAudioFile } from './interview-audio.js';
 import { createInterviewService } from './interview.service.js';
 
 const parse = (schema, value) => {
@@ -22,8 +24,15 @@ const parse = (schema, value) => {
   return result.data;
 };
 
-export const createInterviewRouter = ({ aiGateway }) => {
+export const createInterviewRouter = ({
+  aiGateway,
+  maximumAudioSizeBytes = 25_000_000,
+}) => {
   const router = Router();
+  const upload = multer({
+    limits: { fileSize: maximumAudioSizeBytes, files: 1 },
+    storage: multer.memoryStorage(),
+  });
   const service = createInterviewService({ aiGateway });
   router.use(requireAuth);
 
@@ -49,6 +58,20 @@ export const createInterviewRouter = ({ aiGateway }) => {
     });
     response.status(200).json({ data });
   });
+
+  router.post(
+    '/:interviewId/transcriptions',
+    upload.single('audio'),
+    async (request, response) => {
+      const file = validateInterviewAudioFile(request.file);
+      const data = await service.transcribeAnswer({
+        file,
+        interviewId: request.params.interviewId,
+        userId: request.auth.user._id,
+      });
+      response.status(200).json({ data });
+    },
+  );
 
   router.post('/:interviewId/answers', async (request, response) => {
     const input = parse(submitAnswerSchema, request.body);

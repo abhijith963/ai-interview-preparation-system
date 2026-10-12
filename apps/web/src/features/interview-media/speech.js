@@ -1,6 +1,3 @@
-export const getSpeechRecognitionConstructor = () =>
-  globalThis.SpeechRecognition || globalThis.webkitSpeechRecognition || null;
-
 export const speakInterviewQuestion = (text) => {
   if (!text || !globalThis.speechSynthesis) return false;
   globalThis.speechSynthesis.cancel();

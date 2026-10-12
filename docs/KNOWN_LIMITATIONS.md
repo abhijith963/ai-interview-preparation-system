@@ -2,13 +2,13 @@
 
 ## MVP limitations
 
-- Interviews are text-only and English-oriented. There is no voice, video, emotion, personality, honesty, or psychological-confidence analysis.
+- Voice and video modes use recorded-answer transcription; they do not perform emotion, personality, honesty, psychological-confidence, or video-behavior analysis.
 - Only four software roles and their curated skill taxonomies are supported.
 - Resume parsing supports text-bearing PDF/DOCX files up to 5 MB. Scanned-image OCR, encrypted files, tables with unusual layouts, and perfect semantic extraction are not supported.
-- OpenAI output is schema-validated but can still contain imperfect judgment. Feedback is preparation guidance, not an authoritative hiring assessment.
+- Groq output is schema-validated but can still contain imperfect judgment. Feedback is preparation guidance, not an authoritative hiring assessment.
 - The Interview Preparation Readiness Score reflects only evidence collected in this application. It is not a probability of being hired or a guaranteed placement outcome.
 - The college MVP has no password reset, email verification, MFA, data export workflow, administrator console, or institutional tenancy.
-- The API uses one configured OpenAI provider/model. There is no queue, fallback provider, offline evaluation, or cost dashboard.
+- The API uses one configured Groq provider/model. There is no queue, fallback provider, offline evaluation, or cost dashboard.
 - Free/low-cost hosting can cold-start and is unsuitable for availability guarantees. Formal load/availability targets were intentionally not MVP blockers.
 - Accessibility was tested with keyboard, automated axe checks, contrast/reflow inspection, and responsive browser sizes; it is not a formal certification or a complete assistive-technology/browser matrix.
 

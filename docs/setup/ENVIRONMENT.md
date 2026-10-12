@@ -11,13 +11,15 @@
 | `SESSION_SECRET` | Phase 2 | At least 32 random characters | Server session signing |
 | `SESSION_NAME` | Phase 2 | `ai_interview_sid` | Cookie name |
 | `SESSION_TTL_HOURS` | Phase 2 | `24` | Session lifetime |
-| `OPENAI_API_KEY` | Phase 3 | No default | Server-only OpenAI credential |
-| `OPENAI_MODEL` | Phase 3 | `gpt-5.4-mini` | Configurable generation/evaluation model |
-| `OPENAI_REQUEST_TIMEOUT_MS` | Phase 3 | `30000` | Per-call timeout |
-| `OPENAI_MAX_RETRIES` | Phase 3 | `1` | Application-level bounded retry |
+| `GROQ_API_KEY` | Phase 3 | No default | Server-only Groq credential |
+| `GROQ_MODEL` | Phase 3 | `openai/gpt-oss-20b` | Configurable structured-output generation/evaluation model |
+| `GROQ_TRANSCRIPTION_MODEL` | Voice/video | `whisper-large-v3-turbo` | Recorded-answer transcription model |
+| `GROQ_REQUEST_TIMEOUT_MS` | Phase 3 | `30000` | Per-call timeout |
+| `GROQ_MAX_RETRIES` | Phase 3 | `1` | Application-level bounded retry |
+| `MAX_AUDIO_SIZE_BYTES` | Voice/video | `25000000` | Maximum recording upload size |
 | `MAX_RESUME_SIZE_BYTES` | Phase 2 | `5242880` | Fixed 5 MB limit |
 
-The initial model is configurable rather than embedded in prompts or feature code. GPT-5.4 mini is the Phase 1 example because the official [model page](https://developers.openai.com/api/docs/models/gpt-5.4-mini) lists Responses API and structured-output support. Access and billing still depend on the project owner's OpenAI account.
+The initial model is configurable rather than embedded in prompts or feature code. `openai/gpt-oss-20b` supports Groq strict structured outputs; `whisper-large-v3-turbo` transcribes supported browser recordings. Access and billing depend on the project owner's Groq account.
 
 ## Web variables
 
@@ -30,7 +32,7 @@ Only variables beginning with `VITE_` are included in the client bundle. Secrets
 ## External services
 
 1. **MongoDB** — local Community Server or an approved MongoDB Atlas database. Required to run the API server.
-2. **OpenAI API** — required from Phase 3 for question generation and semantic evaluation. All calls originate from the API server.
+2. **Groq API** — required from Phase 3 for question generation, semantic evaluation, and recorded-answer transcription. All calls originate from the API server.
 
 No email provider, object-storage provider, job queue, analytics SaaS, or institutional service is required for the MVP. GridFS uses MongoDB for resume binary storage.
 
@@ -43,6 +45,6 @@ npm install
 npm run dev
 ```
 
-Phase 3 automated checks use a local isolated MongoDB process and a fake OpenAI gateway, so they do not require an API key or consume credits. Running real interviews requires `OPENAI_API_KEY`; without it, interview creation fails into a safe retryable state while non-AI features continue to run.
+Automated checks use a local isolated MongoDB process and a fake AI gateway, so they do not require an API key or consume credits. Running real interviews requires `GROQ_API_KEY`; without it, interview creation fails into a safe retryable state while non-AI features continue to run.
 
 For production values, HTTPS/session-cookie requirements, build/start commands, and hosting options, see [Deployment preparation](../DEPLOYMENT.md).

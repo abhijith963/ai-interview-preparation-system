@@ -10,6 +10,7 @@ import { createApiRouter } from './routes/index.js';
 
 export const createApp = ({
   aiGateway = createUnavailableAiGateway(),
+  maximumAudioSizeBytes = 25_000_000,
   maximumResumeSizeBytes = 5_242_880,
   secureCookies = false,
   sessionName = 'ai_interview_sid',
@@ -48,7 +49,7 @@ export const createApp = ({
 
   app.use(
     '/api/v1',
-    createApiRouter({ aiGateway, maximumResumeSizeBytes }),
+    createApiRouter({ aiGateway, maximumAudioSizeBytes, maximumResumeSizeBytes }),
   );
   app.use(notFound);
   app.use(errorHandler);

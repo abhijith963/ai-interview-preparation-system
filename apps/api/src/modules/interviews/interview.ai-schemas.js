@@ -55,8 +55,10 @@ export const evaluationOutputSchema = z.object({
     explanation: conciseText.nullable(),
   }),
   quality: z.object({
-    answerWasBlank: z.boolean(),
-    answerWasUnscorable: z.boolean(),
-    uncertaintyReason: conciseText.nullable(),
+    // HTTP validation already rejects blank answers. A response accepted for scoring must
+    // therefore describe the submitted answer rather than decline to evaluate it.
+    answerWasBlank: z.literal(false),
+    answerWasUnscorable: z.literal(false),
+    uncertaintyReason: z.null(),
   }),
 });

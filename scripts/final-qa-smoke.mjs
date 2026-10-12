@@ -4,13 +4,13 @@ import os from 'node:os';
 import path from 'node:path';
 
 import AxeBuilder from '@axe-core/playwright';
-import OpenAI from 'openai';
+import Groq from 'groq-sdk';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { chromium } from 'playwright';
 
-const baseUrl = process.env.PHASE5_WEB_URL ?? 'http://127.0.0.1:5173';
-const apiBaseUrl = process.env.PHASE5_API_URL ?? 'http://127.0.0.1:4000/api/v1';
-const model = process.env.OPENAI_MODEL ?? 'gpt-5.4-mini';
+const baseUrl = process.env.PHASE5_WEB_URL ?? 'http://localhost:5173';
+const apiBaseUrl = process.env.PHASE5_API_URL ?? 'http://localhost:4000/api/v1';
+const model = process.env.GROQ_MODEL ?? 'openai/gpt-oss-20b';
 const password = 'Phase5-QA-password-2026';
 const runId = Date.now();
 const mainEmail = `phase5-main-${runId}@example.com`;
@@ -155,24 +155,24 @@ const selectRoleAndStart = async (page, roleId, { useResume }) => {
   return page.url().split('/').at(-1);
 };
 
-const openAi = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 1, timeout: 60_000 });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, maxRetries: 1, timeout: 60_000 });
 
 const generateStrongAnswer = async (question) => {
-  const response = await openAi.responses.create({
-    input: [
+  const response = await groq.chat.completions.create({
+    messages: [
       {
-        role: 'developer',
+        role: 'system',
         content:
           'Write a technically accurate, concise interview answer. State assumptions, explain the mechanism, include trade-offs or validation where relevant, and use a clear professional structure. Return only the answer.',
       },
       { role: 'user', content: question },
     ],
-    max_output_tokens: 700,
+    max_tokens: 700,
     model,
-    store: false,
   });
-  assert.ok(response.output_text.trim(), 'Answer-generation helper returned no text');
-  return response.output_text.trim();
+  const answer = response.choices[0]?.message?.content?.trim();
+  assert.ok(answer, 'Answer-generation helper returned no text');
+  return answer;
 };
 
 const completeInterview = async (page, interviewId, { strongAfter = Number.POSITIVE_INFINITY }) => {
@@ -279,7 +279,7 @@ const completeInterview = async (page, interviewId, { strongAfter = Number.POSIT
   };
 };
 
-assert.ok(process.env.OPENAI_API_KEY, 'OPENAI_API_KEY is required for the real smoke test');
+assert.ok(process.env.GROQ_API_KEY, 'GROQ_API_KEY is required for the real smoke test');
 
 const firstResume = path.join(evidenceDirectory, 'initial-resume.pdf');
 const replacementResume = path.join(evidenceDirectory, 'replacement-resume.pdf');

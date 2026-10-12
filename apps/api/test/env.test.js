@@ -9,7 +9,11 @@ test('environment loader applies safe development defaults', () => {
   });
 
   assert.equal(environment.API_PORT, 4000);
-  assert.equal(environment.OPENAI_MODEL, 'gpt-5.4-mini');
+  assert.equal(environment.GROQ_MODEL, 'openai/gpt-oss-20b');
+  assert.equal(environment.GROQ_TRANSCRIPTION_MODEL, 'whisper-large-v3-turbo');
+  assert.equal(environment.GROQ_REQUEST_TIMEOUT_MS, 30_000);
+  assert.equal(environment.GROQ_MAX_RETRIES, 1);
+  assert.equal(environment.MAX_AUDIO_SIZE_BYTES, 25_000_000);
   assert.equal(environment.MAX_RESUME_SIZE_BYTES, 5_242_880);
 });
 

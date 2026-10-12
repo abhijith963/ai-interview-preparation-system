@@ -7,7 +7,7 @@ A college-project MVP for resume-aware, adaptive, text-based software interview 
 - Email/password registration with server-managed sessions and basic data-processing consent
 - PDF/DOCX resume upload, extraction, review, confirmation, replacement, and deletion (5 MB maximum)
 - Four target roles: Software Engineer, Frontend Developer, Backend Developer, and Full-Stack Developer
-- Recoverable 10-question text interviews generated and evaluated through the server-side OpenAI Responses API
+- Recoverable 10-question text, voice, and video interviews generated and evaluated through the server-side Groq API
 - Deterministic five-dimensional scoring and Easy/Medium/Hard adaptation
 - Resume-grounded questions and cautious consistency observations
 - Role-specific competencies, evidence confidence, weak topics, readiness, recommendations, history, and an accessible Recharts dashboard
@@ -15,11 +15,11 @@ A college-project MVP for resume-aware, adaptive, text-based software interview 
 
 ## Architecture and stack
 
-The repository is an npm-workspaces modular monolith: one React client, one Express API, one shared configuration package, and MongoDB/GridFS. Only the API calls OpenAI. Authorization, state changes, final scores, adaptive decisions, competencies, and readiness calculations are deterministic backend responsibilities.
+The repository is an npm-workspaces modular monolith: one React client, one Express API, one shared configuration package, and MongoDB/GridFS. Only the API calls Groq. Authorization, state changes, final scores, adaptive decisions, competencies, and readiness calculations are deterministic backend responsibilities.
 
 - React 19, React Router, Tailwind CSS, Recharts
 - Node.js 22+, Express 5, MongoDB/Mongoose, GridFS
-- OpenAI Responses API with Zod-validated structured outputs and `store: false`
+- Groq chat completions with Zod-validated structured outputs; Groq Whisper transcription for recorded answers
 - Vitest/Testing Library, Node test runner/Supertest, Playwright, and axe-core
 
 ## Run locally
@@ -33,7 +33,7 @@ cp apps/web/.env.example apps/web/.env
 npm run dev
 ```
 
-Set a random `SESSION_SECRET` of at least 32 characters in `apps/api/.env`. Set `OPENAI_API_KEY` to run live interviews; ordinary automated tests use a fake gateway and consume no API credits. The defaults expect MongoDB at `mongodb://127.0.0.1:27017/ai_interview_prep`, the API at `http://localhost:4000`, and the web app at `http://localhost:5173`.
+Set a random `SESSION_SECRET` of at least 32 characters in `apps/api/.env`. Set `GROQ_API_KEY` to run live interviews and recorded-answer transcription; ordinary automated tests use a fake gateway and consume no API credits. The defaults expect MongoDB at `mongodb://127.0.0.1:27017/ai_interview_prep`, the API at `http://localhost:4000`, and the web app at `http://localhost:5173`.
 
 Open `http://localhost:5173`. A normal flow is: register → optionally upload and confirm a resume → choose a role → complete 10 questions → review the result → inspect dashboard/history.
 
@@ -50,7 +50,7 @@ npm run check        # lint, all tests, and production build
 npm audit
 ```
 
-The optional real-provider browser smoke harness is `node scripts/final-qa-smoke.mjs`; it requires locally running web/API/MongoDB services, a funded OpenAI key, and its explicit environment variables. Read [Testing](docs/TESTING.md) before using it because a run creates scoped QA data and makes real provider calls.
+The optional real-provider browser smoke harness is `node scripts/final-qa-smoke.mjs`; it requires locally running web/API/MongoDB services, a funded Groq key, and its explicit environment variables. Read [Testing](docs/TESTING.md) before using it because a run creates scoped QA data and makes real provider calls.
 
 ## Documentation map
 
@@ -67,4 +67,4 @@ The optional real-provider browser smoke harness is `node scripts/final-qa-smoke
 
 ## Deployment status
 
-The code and documentation are deployment-ready, but no external platform has been selected or provisioned. Production requires HTTPS, a MongoDB database, a server-only OpenAI key, a strong session secret, exact CORS configuration, and a same-site frontend/API arrangement for the current secure session-cookie policy. See [Deployment preparation](docs/DEPLOYMENT.md) before deploying.
+The code and documentation are deployment-ready, but no external platform has been selected or provisioned. Production requires HTTPS, a MongoDB database, a server-only Groq key, a strong session secret, exact CORS configuration, and a same-site frontend/API arrangement for the current secure session-cookie policy. See [Deployment preparation](docs/DEPLOYMENT.md) before deploying.

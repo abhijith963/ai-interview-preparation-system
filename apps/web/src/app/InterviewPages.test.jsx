@@ -1,5 +1,5 @@
 import { ROLE_PROFILES } from '@ai-interview/shared';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -78,6 +78,7 @@ const session = (overrides = {}) => ({
   answeredCount: 0,
   currentDifficulty: 'MEDIUM',
   id: 'interview-1',
+  mode: 'TEXT',
   questionCount: 10,
   role,
   status: 'AWAITING_ANSWER',
@@ -131,34 +132,6 @@ describe('Phase 3 interview pages', () => {
           session: session(),
         }, 201);
       }
-      if (request.path === '/interviews' && request.method === 'POST') {
-        expect(JSON.parse(options.body)).toEqual({
-          mode: 'VOICE',
-          mediaConsent: { microphone: true },
-          roleId: 'backend-developer',
-          useResume: false,
-        });
-        return response({
-          currentQuestion: firstQuestion,
-          error: null,
-          lastEvaluation: null,
-          session: session(),
-        }, 201);
-      }
-      if (request.path === '/interviews' && request.method === 'POST') {
-        expect(JSON.parse(options.body)).toEqual({
-          mode: 'VIDEO',
-          mediaConsent: { camera: true, microphone: true },
-          roleId: 'backend-developer',
-          useResume: false,
-        });
-        return response({
-          currentQuestion: firstQuestion,
-          error: null,
-          lastEvaluation: null,
-          session: session(),
-        }, 201);
-      }
       if (request.path === '/interviews/interview-1') {
         return response({
           currentQuestion: firstQuestion,
@@ -176,6 +149,96 @@ describe('Phase 3 interview pages', () => {
     await browser.click(
       await screen.findByRole('button', { name: 'Start 10-question interview' }),
     );
+    expect(await screen.findByText(firstQuestion.questionText)).toBeInTheDocument();
+  });
+
+  it('requires microphone consent and starts Voice mode with the expected payload', async () => {
+    const fetchMock = vi.fn(async (input, options) => {
+      const request = requestDetails(input, options);
+      if (request.path === '/me') return response({ user: testUser });
+      if (request.path === '/roles') return response({ roles: ROLE_PROFILES });
+      if (request.path === '/resume') return response({ resume: null });
+      if (request.path === '/interviews' && request.method === 'POST') {
+        expect(JSON.parse(options.body)).toEqual({
+          mediaConsent: { camera: false, microphone: true },
+          mode: 'VOICE',
+          roleId: 'backend-developer',
+          useResume: false,
+        });
+        return response({
+          currentQuestion: firstQuestion,
+          error: null,
+          lastEvaluation: null,
+          session: session({ mode: 'VOICE' }),
+        }, 201);
+      }
+      if (request.path === '/interviews/interview-1') {
+        return response({
+          currentQuestion: firstQuestion,
+          error: null,
+          lastEvaluation: null,
+          session: session({ mode: 'VOICE' }),
+        });
+      }
+      throw new Error(`Unexpected request: ${request.method} ${request.path}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const browser = userEvent.setup();
+
+    renderAt('/interviews/new');
+    await browser.click(await screen.findByRole('radio', { name: /Voice interview/i }));
+    const start = screen.getByRole('button', { name: 'Start 10-question interview' });
+    expect(start).toBeDisabled();
+    await browser.click(screen.getByRole('checkbox', { name: /Allow microphone/i }));
+    expect(start).toBeEnabled();
+    await browser.click(start);
+    expect(await screen.findByText(firstQuestion.questionText)).toBeInTheDocument();
+  });
+
+  it('shows both consent controls and starts Video mode with camera and microphone consent', async () => {
+    const fetchMock = vi.fn(async (input, options) => {
+      const request = requestDetails(input, options);
+      if (request.path === '/me') return response({ user: testUser });
+      if (request.path === '/roles') return response({ roles: ROLE_PROFILES });
+      if (request.path === '/resume') return response({ resume: null });
+      if (request.path === '/interviews' && request.method === 'POST') {
+        expect(JSON.parse(options.body)).toEqual({
+          mediaConsent: { camera: true, microphone: true },
+          mode: 'VIDEO',
+          roleId: 'backend-developer',
+          useResume: false,
+        });
+        return response({
+          currentQuestion: firstQuestion,
+          error: null,
+          lastEvaluation: null,
+          session: session({ mode: 'VIDEO' }),
+        }, 201);
+      }
+      if (request.path === '/interviews/interview-1') {
+        return response({
+          currentQuestion: firstQuestion,
+          error: null,
+          lastEvaluation: null,
+          session: session({ mode: 'VIDEO' }),
+        });
+      }
+      throw new Error(`Unexpected request: ${request.method} ${request.path}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const browser = userEvent.setup();
+
+    renderAt('/interviews/new');
+    await browser.click(await screen.findByRole('radio', { name: /Video interview/i }));
+    const microphone = screen.getByRole('checkbox', { name: /Allow microphone/i });
+    const camera = screen.getByRole('checkbox', { name: /Allow camera/i });
+    const start = screen.getByRole('button', { name: 'Start 10-question interview' });
+    expect(start).toBeDisabled();
+    await browser.click(microphone);
+    expect(start).toBeDisabled();
+    await browser.click(camera);
+    expect(start).toBeEnabled();
+    await browser.click(start);
     expect(await screen.findByText(firstQuestion.questionText)).toBeInTheDocument();
   });
 
@@ -222,6 +285,128 @@ describe('Phase 3 interview pages', () => {
     expect(await screen.findByText(secondQuestion.questionText)).toBeInTheDocument();
     expect(screen.getByText('Question 2 of 10')).toBeInTheDocument();
   });
+
+  it.each([
+    ['VOICE', 'Start microphone recording'],
+    ['VIDEO', 'Start camera/microphone recording'],
+  ])(
+    'uploads %s recorder audio for transcription and submits it as a recorded answer',
+    async (mode, startButtonName) => {
+      const tracks = [{ stop: vi.fn() }, { stop: vi.fn() }];
+      const capturedStream = {
+        getAudioTracks: () => [tracks[0]],
+        getTracks: () => tracks,
+      };
+      class TestMediaStream {
+        constructor(nextTracks) {
+          this.tracks = nextTracks;
+        }
+
+        getTracks() {
+          return this.tracks;
+        }
+      }
+      class TestMediaRecorder {
+        constructor(recordingStream) {
+          this.mimeType = 'audio/webm';
+          this.state = 'inactive';
+          this.stream = recordingStream;
+        }
+
+        start() {
+          this.state = 'recording';
+        }
+
+        stop() {
+          this.state = 'inactive';
+          this.ondataavailable?.({
+            data: new Blob(['recorded audio'], { type: this.mimeType }),
+          });
+          Promise.resolve().then(() => this.onstop?.());
+        }
+      }
+      const navigatorMock = Object.create(globalThis.navigator);
+      navigatorMock.mediaDevices = {
+        getUserMedia: vi.fn(async (constraints) => {
+          expect(constraints).toEqual(
+            mode === 'VIDEO' ? { audio: true, video: true } : { audio: true },
+          );
+          return capturedStream;
+        }),
+      };
+      vi.stubGlobal('navigator', navigatorMock);
+      vi.stubGlobal('MediaRecorder', TestMediaRecorder);
+      vi.stubGlobal('MediaStream', TestMediaStream);
+
+      const fetchMock = vi.fn(async (input, options) => {
+        const request = requestDetails(input, options);
+        if (request.path === '/me') return response({ user: testUser });
+        if (request.path === '/interviews/interview-1' && request.method === 'GET') {
+          return response({
+            currentQuestion: firstQuestion,
+            error: null,
+            lastEvaluation: null,
+            session: session({ mode }),
+          });
+        }
+        if (
+          request.path === '/interviews/interview-1/transcriptions' &&
+          request.method === 'POST'
+        ) {
+          expect(options.body).toBeInstanceOf(FormData);
+          expect(options.body.get('audio')).toBeInstanceOf(Blob);
+          return response({ transcript: 'Use validation and a consistent error envelope.' });
+        }
+        if (
+          request.path === '/interviews/interview-1/answers' &&
+          request.method === 'POST'
+        ) {
+          const body = JSON.parse(options.body);
+          expect(body).toMatchObject({
+            answerText: 'Use validation and a consistent error envelope.',
+            durationMs: 1_500,
+            questionId: firstQuestion.id,
+            source: 'VOICE_TRANSCRIPT',
+          });
+          return response({
+            evaluation: {
+              ...evaluation,
+              answerSource: 'VOICE_TRANSCRIPT',
+              voiceMetrics: {
+                durationMs: 1_500,
+                fillerCount: 0,
+                fillerRatePerMinute: 0,
+                speakingPaceWpm: 240,
+                wordCount: 6,
+              },
+            },
+            nextQuestion: secondQuestion,
+            session: session({ answeredCount: 1, mode }),
+          });
+        }
+        throw new Error(`Unexpected request: ${request.method} ${request.path}`);
+      });
+      vi.stubGlobal('fetch', fetchMock);
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+      const browser = userEvent.setup();
+
+      renderAt('/interviews/interview-1');
+      await browser.click(await screen.findByRole('button', { name: startButtonName }));
+      now.mockReturnValue(2_500);
+      expect(screen.getByRole('button', { name: /submit/i })).toBeDisabled();
+      await browser.click(screen.getByRole('button', { name: 'Stop and transcribe' }));
+      expect(
+        await screen.findByDisplayValue('Use validation and a consistent error envelope.'),
+      ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Submit answer' })).toBeEnabled();
+      });
+      await browser.click(screen.getByRole('button', { name: 'Submit answer' }));
+      expect(await screen.findByRole('heading', { name: 'Score: 80/100' })).toBeInTheDocument();
+      expect(screen.getByText('Communication (voice)')).toBeInTheDocument();
+      expect(tracks.every(({ stop }) => stop.mock.calls.length > 0)).toBe(true);
+    },
+  );
 
   it('recovers an errored AI operation through the retry action', async () => {
     const fetchMock = vi.fn(async (input, options) => {

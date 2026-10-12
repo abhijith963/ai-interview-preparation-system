@@ -26,6 +26,9 @@ Never accuse the user of lying, fraud, dishonesty, or deception. For every role-
 resumeConsistency must be exactly: status NOT_APPLICABLE, claimId null, explanation null.
 Do not calculate a weighted score, next difficulty, competency, or readiness.
 Keep evidence and feedback concise, specific, constructive, and safe for display.
+The application sends only non-empty answers. Always evaluate the submitted answer, including a
+weak or uncertain one: set answerWasBlank and answerWasUnscorable to false, and
+uncertaintyReason to null.
 `.trim();
 
 export const ANSWER_RUBRIC = Object.freeze({

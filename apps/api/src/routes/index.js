@@ -8,7 +8,11 @@ import { roleRouter } from '../modules/roles/role.routes.js';
 import { userRouter } from '../modules/users/user.routes.js';
 import { healthRouter } from './health.routes.js';
 
-export const createApiRouter = ({ aiGateway, maximumResumeSizeBytes }) => {
+export const createApiRouter = ({
+  aiGateway,
+  maximumAudioSizeBytes,
+  maximumResumeSizeBytes,
+}) => {
   const router = Router();
 
   router.use('/health', healthRouter);
@@ -16,7 +20,10 @@ export const createApiRouter = ({ aiGateway, maximumResumeSizeBytes }) => {
   router.use('/me', userRouter);
   router.use('/resume', createResumeRouter({ maximumFileSizeBytes: maximumResumeSizeBytes }));
   router.use('/roles', roleRouter);
-  router.use('/interviews', createInterviewRouter({ aiGateway }));
+  router.use(
+    '/interviews',
+    createInterviewRouter({ aiGateway, maximumAudioSizeBytes }),
+  );
   router.use('/', analyticsRouter);
 
   return router;

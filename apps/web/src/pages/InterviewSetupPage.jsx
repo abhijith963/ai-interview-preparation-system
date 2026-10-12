@@ -103,8 +103,8 @@ export function InterviewSetupPage() {
         </h1>
         <p className="mt-3 max-w-3xl text-slate-600">
           Your selection sets the skill categories used by the 10-question adaptive interview.
-          Text interviews are the verified core. Voice interviews add microphone recording,
-          transcription, and spoken questions without changing the technical score.
+          Choose text, voice, or video. Recorded answers are transcribed for review before
+          submission, and communication metrics remain separate from the technical score.
         </p>
       </section>
 
@@ -171,10 +171,11 @@ export function InterviewSetupPage() {
         </p>
         <fieldset className="mt-5">
           <legend className="text-sm font-semibold text-slate-950">Interview mode</legend>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
             {[
               ['TEXT', 'Text interview', 'Type answers. This is the completed, verified path.'],
               ['VOICE', 'Voice interview', 'Record answers, edit the transcript, and hear the question.'],
+              ['VIDEO', 'Video interview', 'Practice on camera, record answers, and edit the transcript.'],
             ].map(([value, label, description]) => (
               <label
                 className={`cursor-pointer rounded-xl border bg-white p-4 ${

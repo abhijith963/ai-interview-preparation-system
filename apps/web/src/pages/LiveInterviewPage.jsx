@@ -28,6 +28,7 @@ export function LiveInterviewPage() {
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMediaBusy, setIsMediaBusy] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [view, setView] = useState(null);
   const durationMs = useRef(0);
@@ -95,6 +96,10 @@ export function LiveInterviewPage() {
     }
 
     const question = view.currentQuestion;
+    if (isMediaBusy) {
+      setError('Stop the recording and wait for transcription before submitting.');
+      return;
+    }
     if (submission.current.questionId !== question.id) {
       submission.current = { key: newIdempotencyKey(), questionId: question.id };
     }
@@ -104,9 +109,13 @@ export function LiveInterviewPage() {
       const data = await apiRequest(`/interviews/${interviewId}/answers`, {
         body: {
           answerText: trimmedAnswer,
-          durationMs: view.session.mode === 'VOICE' ? durationMs.current : undefined,
+          durationMs: ['VOICE', 'VIDEO'].includes(view.session.mode)
+            ? durationMs.current
+            : undefined,
           questionId: question.id,
-          source: view.session.mode === 'VOICE' ? 'VOICE_TRANSCRIPT' : 'TYPED',
+          source: ['VOICE', 'VIDEO'].includes(view.session.mode)
+            ? 'VOICE_TRANSCRIPT'
+            : 'TYPED',
         },
         headers: { 'Idempotency-Key': submission.current.key },
         method: 'POST',
@@ -351,6 +360,8 @@ export function LiveInterviewPage() {
             {isVideo ? (
               <VideoAnswerPanel
                 disabled={isProcessing}
+                interviewId={interviewId}
+                onBusyChange={setIsMediaBusy}
                 onTranscriptChange={(text, elapsed) => {
                   setAnswerText(text);
                   durationMs.current = elapsed;
@@ -360,6 +371,8 @@ export function LiveInterviewPage() {
             ) : isVoice ? (
               <VoiceAnswerPanel
                 disabled={isProcessing}
+                interviewId={interviewId}
+                onBusyChange={setIsMediaBusy}
                 onTranscriptChange={(text, elapsed) => {
                   setAnswerText(text);
                   durationMs.current = elapsed;
@@ -384,15 +397,19 @@ export function LiveInterviewPage() {
             )}
             <div className="mt-2 flex justify-between gap-4 text-xs text-slate-500">
               <span>
-                {isVoice
-                  ? 'Technical scoring uses the transcript. Voice metrics stay separate.'
+                {isVoice || isVideo
+                  ? 'Technical scoring uses the transcript. Communication metrics stay separate.'
                   : 'Evaluation considers only this written response.'}
               </span>
               <span>{answerText.length}/10,000</span>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button className="button-primary" disabled={isProcessing} type="submit">
-                {isProcessing ? 'Evaluating and preparing next question…' : 'Submit answer'}
+              <button className="button-primary" disabled={isProcessing || isMediaBusy} type="submit">
+                {isProcessing
+                  ? 'Evaluating and preparing next question…'
+                  : isMediaBusy
+                    ? 'Finish transcription to submit'
+                    : 'Submit answer'}
               </button>
               <button className="button-secondary" disabled={isProcessing} onClick={handleEndEarly} type="button">
                 End interview

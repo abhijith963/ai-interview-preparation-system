@@ -11,13 +11,15 @@ const environmentSchema = z.object({
   SESSION_SECRET: z.string().min(32),
   SESSION_NAME: z.string().min(1).default('ai_interview_sid'),
   SESSION_TTL_HOURS: z.coerce.number().positive().default(24),
-  OPENAI_API_KEY: z.preprocess(
+  GROQ_API_KEY: z.preprocess(
     (value) => (value === '' ? undefined : value),
     z.string().min(1).optional(),
   ),
-  OPENAI_MODEL: z.string().min(1).default('gpt-5.4-mini'),
-  OPENAI_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
-  OPENAI_MAX_RETRIES: z.coerce.number().int().min(0).max(1).default(1),
+  GROQ_MODEL: z.string().min(1).default('openai/gpt-oss-20b'),
+  GROQ_TRANSCRIPTION_MODEL: z.string().min(1).default('whisper-large-v3-turbo'),
+  GROQ_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+  GROQ_MAX_RETRIES: z.coerce.number().int().min(0).max(1).default(1),
+  MAX_AUDIO_SIZE_BYTES: z.coerce.number().int().positive().default(25_000_000),
   MAX_RESUME_SIZE_BYTES: z.coerce.number().int().positive().default(5_242_880),
 });
 

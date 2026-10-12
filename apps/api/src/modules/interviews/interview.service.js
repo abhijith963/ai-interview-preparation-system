@@ -72,6 +72,22 @@ const safeOperationError = (error, interviewId) => {
   );
 };
 
+const safeTranscriptionError = (error) => {
+  if (error.code === 'AI_OUTPUT_INVALID') {
+    return new AppError(
+      422,
+      'NO_SPEECH_DETECTED',
+      'No clear speech was detected. Retry the recording or type your answer instead.',
+    );
+  }
+  return new AppError(
+    503,
+    error.code ?? 'AI_PROVIDER_FAILED',
+    'Transcription is temporarily unavailable. Retry or type your answer instead.',
+    { retryable: true },
+  );
+};
+
 const markError = async (interview, { error, failedOperation, resumeState }) => {
   interview.status = 'ERROR';
   interview.error = {
@@ -459,6 +475,16 @@ export const createInterviewService = ({ aiGateway }) => {
           'This interview is not currently accepting an answer.',
         );
       }
+      const recordedMode = ['VOICE', 'VIDEO'].includes(existing.mode);
+      if (recordedMode !== (source === 'VOICE_TRANSCRIPT')) {
+        throw new AppError(
+          422,
+          'ANSWER_SOURCE_INVALID',
+          recordedMode
+            ? 'Voice and video interviews require a recorded-answer transcript.'
+            : 'Text interviews require a typed answer.',
+        );
+      }
       const itemIndex = existing.currentQuestionIndex;
       const currentItem = existing.items[itemIndex];
       if (currentItem._id.toString() !== questionId) {
@@ -486,7 +512,7 @@ export const createInterviewService = ({ aiGateway }) => {
               submittedAt: new Date(),
               text: answerText,
               voiceMetrics:
-                source === 'VOICE_TRANSCRIPT'
+                source === 'VOICE_TRANSCRIPT' && durationMs > 0
                   ? computeVoiceMetrics({ durationMs: durationMs ?? 0, transcript: answerText })
                   : null,
             },
@@ -514,6 +540,41 @@ export const createInterviewService = ({ aiGateway }) => {
 
       const { interview, item } = await evaluateCurrentAnswer(accepted);
       return toAnswerResult(interview, item);
+    },
+
+    async transcribeAnswer({ file, interviewId, userId }) {
+      const interview = await getOwnedInterview(interviewId, userId);
+      if (!['VOICE', 'VIDEO'].includes(interview.mode)) {
+        throw new AppError(
+          409,
+          'TRANSCRIPTION_NOT_AVAILABLE',
+          'Transcription is available only for voice and video interviews.',
+        );
+      }
+      if (!interview.mediaConsent?.microphone) {
+        throw new AppError(
+          409,
+          'MICROPHONE_CONSENT_REQUIRED',
+          'Microphone consent is required before transcribing an answer.',
+        );
+      }
+      if (interview.status !== 'AWAITING_ANSWER') {
+        throw new AppError(
+          409,
+          'INTERVIEW_NOT_ACCEPTING_ANSWER',
+          'This interview is not currently accepting an answer.',
+        );
+      }
+      try {
+        const transcript = await aiGateway.transcribeAudio({
+          buffer: file.buffer,
+          filename: file.originalname,
+          mimeType: file.mimetype,
+        });
+        return { transcript };
+      } catch (error) {
+        throw safeTranscriptionError(error);
+      }
     },
   });
 };
